@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Weld Solver">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#262A25">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<title>Weld Solutions - Laser Weld Parameter Solver</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --mount:#9A9E8C; --field:#E7E9E0; --metal:#C8CCC4; --metal-dk:#7E857C;
+    --ink:#1A1D19; --ink-2:#565C54; --rule:#B9BEB2; --paper:#FFFFFF;
+    --red:#D6342C; --dark:#262A25; --ok:#2F6B3A; --amber:#B0761F;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;max-width:100%;overflow-x:hidden}
+  body{background:var(--field);color:var(--ink);
+    font:15px/1.5 "Archivo Narrow",Arial Narrow,Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1000px;margin:0 auto;
+    padding:calc(24px + env(safe-area-inset-top)) calc(18px + env(safe-area-inset-right))
+            calc(18px + env(safe-area-inset-bottom)) calc(18px + env(safe-area-inset-left))}
+  /* iOS zooms the page whenever a focused field is under 16px, so hold every input at 16 */
+  input[type=number],select{font-size:16px}
+  .ratepair input,.card input[type=number]{font-size:16px}
+
+  .mast{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;
+    border-bottom:3px solid var(--ink);padding-bottom:10px;margin-bottom:16px;flex-wrap:wrap}
+  .mast .lockup{font-weight:700;font-size:clamp(24px,4.6vw,38px);letter-spacing:-.01em;text-transform:uppercase;line-height:1}
+  .mast .lockup span{color:var(--red)}
+  .mast .doc{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-2);text-align:right;line-height:1.8}
+.mast .doc a{color:var(--red);text-decoration:none;border-bottom:1px solid var(--red)}
+.mast .tag{font-size:13px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-2);margin-top:5px}
+@media (max-width:560px){.mast .doc{text-align:left}.mast .tag{font-size:12px;letter-spacing:.08em}}
+
+  .setup{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+  @media (max-width:860px){.setup{grid-template-columns:1fr 1fr}}
+  @media (max-width:560px){.setup{grid-template-columns:1fr}}
+  .ratepair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .ratepair label{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--metal-dk);margin-bottom:3px}
+  .ratepair input{font-size:15px;padding:6px 8px}
+  .setup .box{background:var(--paper);border:1px solid var(--rule);padding:12px 14px;min-width:0}
+  .setup .l{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);margin-bottom:6px}
+  .spotrow{display:flex;align-items:center;gap:10px}
+  .spotval{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:26px;line-height:1}
+  .spotval small{font-size:13px;font-weight:400;color:var(--ink-2)}
+  .optbtn{margin-left:auto;font-family:"Archivo Narrow",sans-serif;font-size:12px;letter-spacing:.1em;
+    text-transform:uppercase;padding:7px 11px;background:var(--field);border:1px solid var(--metal-dk);
+    color:var(--ink);cursor:pointer;white-space:nowrap}
+  .optbtn:hover{background:var(--metal)}
+  .wobline{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--ink-2);margin-top:7px}
+
+  select,input[type=number]{width:100%;min-width:0;padding:8px 9px;border:1px solid var(--rule);background:#fff;
+    color:var(--ink);font-family:"JetBrains Mono",monospace;font-size:16px;border-radius:0}
+  select:focus,input:focus,button:focus-visible{outline:2px solid var(--red);outline-offset:1px}
+
+  .board{background:var(--paper);border:1px solid var(--rule);margin-bottom:14px}
+  .board h2{font-size:13px;letter-spacing:.2em;text-transform:uppercase;font-weight:600;margin:0;
+    padding:11px 16px;border-bottom:1px solid var(--rule);display:flex;justify-content:space-between;
+    align-items:center;gap:10px;flex-wrap:wrap}
+  .board h2 em{font-style:normal;font-family:"JetBrains Mono",monospace;font-size:11px;
+    letter-spacing:.06em;color:var(--ink-2);text-transform:none}
+  .params{display:grid;grid-template-columns:repeat(3,1fr)}
+  @media (max-width:760px){.params{grid-template-columns:repeat(2,1fr)}}
+  @media (max-width:430px){.params{grid-template-columns:1fr}}
+  .p{padding:11px 14px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);min-width:0}
+  .p.wide{grid-column:1 / -1}
+  .p label{display:block;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);
+    margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .p .unit{color:var(--metal-dk)}
+  .p .sub{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--metal-dk);margin-top:4px}
+  .p .ro{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:19px;line-height:1.2;
+    padding:7px 0 0;color:var(--ink)}
+  .p.good{background:#EFF6F0;box-shadow:inset 3px 0 0 var(--ok)} .p.good .ro{color:var(--ok)}
+  .p.warn{background:#FBF4E7;box-shadow:inset 3px 0 0 var(--amber)} .p.warn .ro{color:var(--amber)}
+  .p.bad{background:#FDF0EF;box-shadow:inset 3px 0 0 var(--red)} .p.bad .ro{color:var(--red)}
+  .p input.over{border-color:var(--red);color:var(--red)}
+  .p.out{background:#FDF0EF;box-shadow:inset 3px 0 0 var(--red)}
+  .p.out label{color:var(--red);font-weight:600}
+  .p.out input{border-color:var(--red);font-weight:700;color:var(--red)}
+  .spd{display:grid;grid-template-columns:minmax(0,1fr) 96px;gap:6px}
+
+  /* calculated status chips */
+  .chips{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--rule);
+    border-bottom:1px solid var(--rule)}
+  .chip{background:var(--paper);padding:9px 13px;min-width:0}
+  .chip .k{font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-2)}
+  .chip .v{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:17px;line-height:1.2;
+    margin-top:3px;overflow-wrap:anywhere}
+  .chip .d{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--metal-dk);margin-top:3px;line-height:1.5}
+  .chip.good{background:#EFF6F0;box-shadow:inset 3px 0 0 var(--ok)}
+  .chip.good .v{color:var(--ok)}
+  .chip.bad{background:#FDF0EF;box-shadow:inset 3px 0 0 var(--red)}
+  .chip.bad .v{color:var(--red)}
+  .chip.warn{background:#FBF4E7;box-shadow:inset 3px 0 0 var(--amber)}
+  .chip.warn .v{color:var(--amber)}
+
+  .results{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule);
+    border-bottom:1px solid var(--rule)}
+  @media (max-width:520px){.results{grid-template-columns:1fr}}
+  .res{background:#FDF0EF;padding:13px 16px;min-width:0;box-shadow:inset 4px 0 0 var(--red)}
+  .res .k{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2)}
+  .res .v{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:clamp(24px,4.4vw,32px);
+    line-height:1.1;color:var(--red);margin-top:4px;overflow-wrap:anywhere}
+  .res .d{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-2);margin-top:5px}
+
+  .calrow{display:grid;grid-template-columns:1fr 1fr 110px auto;gap:10px;padding:14px 16px;align-items:end}
+  @media (max-width:640px){.calrow{grid-template-columns:1fr 1fr;}
+    .calrow .btn{grid-column:1 / -1}}
+  .calf{min-width:0}
+  .calf label{display:block;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--ink-2);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  details.advbox{background:var(--paper);border:1px solid var(--rule);margin-bottom:14px}
+  details.advbox>summary{list-style:none;cursor:pointer;padding:12px 16px;font-size:13px;
+    letter-spacing:.2em;text-transform:uppercase;font-weight:600;display:flex;
+    justify-content:space-between;align-items:center;gap:10px}
+  details.advbox>summary::-webkit-details-marker{display:none}
+  details.advbox>summary em{font-style:normal;font-family:"JetBrains Mono",monospace;font-size:11px;
+    letter-spacing:.04em;text-transform:none;color:var(--ink-2);font-weight:400;margin-right:auto;margin-left:10px}
+  details.advbox>summary::after{content:'+';font-family:"JetBrains Mono",monospace;color:var(--red);font-size:19px}
+  details.advbox[open]>summary{border-bottom:1px solid var(--rule)}
+  details.advbox[open]>summary::after{content:'\2013'}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule);
+    border-bottom:1px solid var(--rule)}
+  @media (max-width:520px){.cards{grid-template-columns:1fr}}
+  .card{background:var(--paper);padding:11px 14px;min-width:0}
+  .card .k{font-size:10.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-2)}
+  .card .v{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:19px;line-height:1.2;
+    margin-top:3px;overflow-wrap:anywhere}
+  .card input[type=number]{margin-top:3px;font-size:19px;font-weight:700;padding:5px 8px}
+  .card.good input[type=number]{border-color:var(--ok)}
+  .card.warn input[type=number]{border-color:var(--amber)}
+  .card.bad input[type=number]{border-color:var(--red)}
+  .card .d{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--metal-dk);
+    margin-top:4px;line-height:1.6}
+  .card.good{background:#EFF6F0;box-shadow:inset 3px 0 0 var(--ok)}
+  .card.good .v{color:var(--ok)}
+  .card.warn{background:#FBF4E7;box-shadow:inset 3px 0 0 var(--amber)}
+  .card.warn .v{color:var(--amber)}
+  .card.bad{background:#FDF0EF;box-shadow:inset 3px 0 0 var(--red)}
+  .card.bad .v{color:var(--red)}
+  .card .dv{font-weight:700;color:var(--ink)}
+  .card .dv.ok{color:var(--ok)}
+  .card .dv.warn{color:var(--amber)}
+  .card .dv.bad{color:var(--red)}
+  .thresh{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;padding:12px 14px;
+    border-bottom:1px solid var(--rule)}
+  .thresh .livenote{grid-column:1 / -1;margin:0}
+  .comments{margin-bottom:14px}
+  .comments .verdict{margin:0 0 8px}
+  .comments .verdict:last-child{margin-bottom:0}
+  .cmphead{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--rule);
+    flex-wrap:wrap}
+  .cmphead span{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-2);flex:1;min-width:150px}
+  .cmphead select{width:auto;min-width:96px}
+  .cmphead .lnk{font-size:12px;letter-spacing:.04em;text-transform:none;white-space:nowrap}
+  .cmphead .btn{padding:9px 18px}
+
+  .dtable{display:grid;grid-template-columns:1.25fr 1fr 1fr .85fr;gap:1px;background:var(--rule);
+    border-bottom:1px solid var(--rule)}
+  .dtable>div{background:var(--paper);padding:8px 12px;min-width:0;display:flex;align-items:center}
+  .dtable .hd{background:var(--field);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--ink-2)}
+  .dtable .hd.r{justify-content:flex-end}
+  .dtable .rl{background:var(--field);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ink-2)}
+  .dtable .cv{font-family:"JetBrains Mono",monospace;font-size:14px;font-weight:700;
+    justify-content:flex-end;text-align:right;overflow-wrap:anywhere}
+  .dtable .cv.calc{color:var(--red)}
+  .dtable .cv input{text-align:right;font-weight:700;padding:5px 7px;font-size:14px}
+  .dtable .cv input.edited{border-color:var(--amber);background:#FBF4E7;color:var(--amber)}
+  .dtable .dv{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:600;
+    justify-content:flex-end;color:var(--ink)}
+  .dtable .dv.ok{color:var(--ok)}
+  .dtable .dv.bad{color:var(--red)}
+  .dtable>div.rowok{background:#EFF6F0}
+  .dtable>div.rowbad{background:#FDF0EF}
+  .dtable>div.rowok.rl{box-shadow:inset 3px 0 0 var(--ok)}
+  .dtable>div.rowbad.rl{box-shadow:inset 3px 0 0 var(--red)}
+  .dtable.adv{border-bottom:0}
+  .dtable.adv>div{padding:6px 12px}
+  .dtable.adv .rl,.dtable.adv .hd{font-size:10.5px}
+  .dtable.adv .cv{font-size:13px;font-weight:500;color:var(--ink)}
+  .dtable.adv .dv{font-size:12px}
+  .dtable.adv .sec{grid-column:1 / -1;background:var(--field);font-size:10px;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--metal-dk);padding:7px 12px}
+  @media (max-width:560px){.dtable.adv .cv{font-size:11.5px}.dtable.adv .rl{font-size:9.5px}}
+  @media (max-width:560px){
+    .dtable{grid-template-columns:1fr 1fr 1fr .8fr}
+    .dtable>div{padding:7px 8px}
+    .dtable .cv{font-size:12.5px}
+    .dtable .rl{font-size:10.5px;letter-spacing:.03em}
+    .dtable .cv input{font-size:12.5px;padding:4px 5px}
+  }
+  .diag{border-bottom:1px solid var(--rule);padding:13px 16px}
+  .diag .dh{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-2);margin-bottom:10px}
+  .diag ol{margin:0;padding-left:20px}
+  .diag li{margin-bottom:10px;font-size:13.5px;line-height:1.55}
+  .diag li:last-child{margin-bottom:0}
+  .diag li::marker{font-family:"JetBrains Mono",monospace;font-weight:700}
+  .diag li.ok::marker{color:var(--ok)}
+  .diag li.warn::marker{color:var(--amber)}
+  .diag li.bad::marker{color:var(--red)}
+  .diag .act{display:block;margin-top:4px;font-family:"JetBrains Mono",monospace;
+    font-size:11.5px;color:var(--ink-2);line-height:1.65}
+  .cmpalt{padding:9px 16px;border-bottom:1px solid var(--rule);font-family:"JetBrains Mono",monospace;
+    font-size:11px;color:var(--metal-dk);line-height:1.7}
+
+  .calnote{padding:0 16px 14px;font-family:"JetBrains Mono",monospace;font-size:11.5px;
+    color:var(--ink-2);line-height:1.7}
+  .calf .tag{float:right;font-family:"JetBrains Mono",monospace;font-size:10px;
+    letter-spacing:.04em;text-transform:none}
+  .calf input.edited{border-color:var(--amber);color:var(--amber);font-weight:700;background:#FBF4E7}
+  .calf .tag.edited{color:var(--amber)}
+  .calf .sub{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--metal-dk);margin-top:4px}
+  .lnk{background:none;border:0;border-bottom:1px solid var(--red);color:var(--red);
+    font:inherit;cursor:pointer;padding:0}
+
+  .runrow{display:flex;gap:10px;padding:14px 16px;flex-wrap:wrap;align-items:center}
+  .btn{font-family:"Archivo Narrow",sans-serif;font-weight:600;font-size:14px;letter-spacing:.14em;
+    text-transform:uppercase;padding:11px 20px;border:1px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer}
+  .btn:hover{background:var(--red);border-color:var(--red);color:#fff}
+  .btn[disabled]{opacity:.4;cursor:default}
+  .btn[disabled]:hover{background:var(--ink);border-color:var(--ink);color:#fff}
+  .runrow .note{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--ink-2);line-height:1.6;flex:1;min-width:170px}
+
+  .macro{border:1px solid var(--ink);background:var(--mount);overflow:hidden;margin-bottom:14px}
+  .macro .mh{padding:10px 16px;background:var(--dark);color:#E8EAE2;font-size:13px;letter-spacing:.2em;
+    text-transform:uppercase;font-weight:600}
+  .pan{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .macro svg{display:block;width:100%;height:auto}
+
+  .macro .cap{padding:9px 16px;background:var(--dark);color:#8D9587;font-family:"JetBrains Mono",monospace;font-size:11px}
+
+  .report{background:var(--paper);border:1px solid var(--rule);margin-bottom:14px}
+  .report .rh{padding:11px 16px;border-bottom:1px solid var(--rule);font-size:13px;letter-spacing:.2em;
+    text-transform:uppercase;font-weight:600}
+  .report .rb{padding:0;font-family:"JetBrains Mono",monospace;font-size:13px;line-height:1.85}
+  .report .rb .verdict{margin:12px 16px 0}
+  .report .rb .verdict:last-child{margin-bottom:14px}
+  .line{display:flex;justify-content:space-between;gap:14px;border-bottom:1px dotted var(--rule);padding:3px 0}
+  .line:last-child{border-bottom:0}
+  .line span:last-child{text-align:right;white-space:nowrap}
+  .verdict{margin-top:12px;padding:10px 13px;font-size:13px;line-height:1.6;border-left:4px solid var(--red);
+    background:#FDF0EF;font-family:"Archivo Narrow",sans-serif}
+  .verdict.pass{border-color:var(--ok);background:#EFF6F0}
+  .verdict b{font-weight:700}
+
+  .mask{position:fixed;inset:0;background:rgba(26,29,25,.72);display:none;align-items:center;justify-content:center;padding:14px;z-index:50}
+  .mask.on{display:flex}
+  .modal{background:var(--paper);border:1px solid var(--ink);max-width:600px;width:100%;max-height:92vh;overflow:auto}
+  .modal h3{margin:0;padding:13px 18px;background:var(--dark);color:#E8EAE2;font-size:13px;letter-spacing:.2em;
+    text-transform:uppercase;font-weight:600;display:flex;justify-content:space-between;position:sticky;top:0;z-index:2}
+  .modal .mb{padding:16px 18px 18px}
+  .modal .fld{margin-bottom:12px}
+  .modal label{display:block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2);margin-bottom:5px}
+  .modal .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .bigspot{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule);border:1px solid var(--rule);margin:0 0 14px}
+  .bigspot div{background:var(--field);padding:11px 13px;min-width:0}
+  .bigspot .n{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:24px;line-height:1.15;overflow-wrap:anywhere}
+  .bigspot .n em{font-style:normal;font-size:13px;font-weight:400;color:var(--ink-2)}
+  .bigspot .t{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2)}
+  .bigspot .s{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--ink-2);margin-top:4px;overflow-wrap:anywhere}
+  .bigspot .trk{background:#FDF0EF}
+  .bigspot .trk .n{color:var(--red)}
+  .optfig{border:1px solid var(--rule);background:var(--dark);margin-bottom:14px;overflow:hidden}
+  .optfig svg{display:block;width:100%;height:auto}
+  #svgOpt{aspect-ratio:580/160}
+  #svgWob{aspect-ratio:580/232}
+  .livenote{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--metal-dk);
+    margin:2px 0 10px;line-height:1.6}
+  .xbtn{background:none;border:0;color:#E8EAE2;font-size:20px;cursor:pointer;line-height:1;padding:0}
+
+  .support{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-2);
+    text-align:center;margin:18px 0 0}
+  .support a{color:var(--red);text-decoration:none;border-bottom:1px solid var(--red)}
+  .foot{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--ink-2);line-height:1.8;
+    padding:14px 16px}
+
+
+  /* install helper: shown only when the site is opened in a browser, never from the installed app */
+  .install-fab{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:9997;
+    border:0;background:var(--dark);color:#fff;padding:11px 14px;font-family:"Archivo Narrow",sans-serif;
+    font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 5px 18px rgba(0,0,0,.22);
+    cursor:pointer;display:none}
+  .install-fab.show{display:block}
+  .install-shade{position:fixed;inset:0;z-index:9998;background:rgba(20,23,20,.56);display:none;
+    align-items:flex-end;justify-content:center;padding:18px;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+  .install-shade.show{display:flex}
+  .install-card{width:min(520px,100%);background:#fff;border:1px solid var(--rule);box-shadow:0 18px 55px rgba(0,0,0,.28)}
+  .install-head{display:flex;align-items:center;gap:12px;padding:15px 16px;border-bottom:1px solid var(--rule)}
+  .install-head img{width:54px;height:54px;border-radius:12px;display:block}
+  .install-head-text{min-width:0;flex:1}
+  .install-title{font-size:20px;font-weight:700;line-height:1.05;text-transform:uppercase;letter-spacing:.02em}
+  .install-sub{margin-top:4px;color:var(--ink-2);font-family:"JetBrains Mono",monospace;font-size:10.5px;line-height:1.45}
+  .install-close{border:0;background:transparent;color:var(--ink-2);font:24px/1 Arial,sans-serif;cursor:pointer;padding:4px 3px 8px 10px}
+  .install-body{padding:15px 16px 16px}
+  .install-body p{margin:0 0 12px;font-size:15px;line-height:1.45}
+  .install-steps{margin:0 0 14px;padding:0;list-style:none;counter-reset:istep}
+  .install-steps li{counter-increment:istep;display:grid;grid-template-columns:29px 1fr;gap:9px;align-items:start;
+    padding:7px 0;border-bottom:1px solid #E7E9E0;font-size:15px;line-height:1.35}
+  .install-steps li:last-child{border-bottom:0}
+  .install-steps li:before{content:counter(istep);width:25px;height:25px;display:grid;place-items:center;background:var(--field);
+    border:1px solid var(--rule);font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:700}
+  .install-actions{display:flex;gap:9px;flex-wrap:wrap}
+  .install-primary,.install-secondary{flex:1 1 180px;padding:11px 14px;border:1px solid var(--dark);cursor:pointer;
+    font-family:"Archivo Narrow",sans-serif;font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase}
+  .install-primary{background:var(--dark);color:#fff}
+  .install-secondary{background:#fff;color:var(--dark)}
+  .install-tip{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--ink-2);line-height:1.55;margin-top:10px}
+  @media (min-width:700px){.install-shade{align-items:center}}
+
+</style>
+</head>
+<body>
+
+<div id="installShade" class="install-shade" aria-hidden="true">
+  <section class="install-card" role="dialog" aria-modal="true" aria-labelledby="installTitle">
+    <div class="install-head">
+      <img src="icon-180.png" alt="Weld Solver icon">
+      <div class="install-head-text">
+        <div id="installTitle" class="install-title">Install Weld Solver</div>
+        <div class="install-sub">Put this tool on your Home Screen and open it like an app.</div>
+      </div>
+      <button id="installClose" class="install-close" type="button" aria-label="Close">×</button>
+    </div>
+    <div class="install-body">
+      <div id="installIos" hidden>
+        <p>On iPhone, Apple requires the final install tap from you:</p>
+        <ol class="install-steps">
+          <li>Tap <strong>Share</strong> in the browser.</li>
+          <li>Choose <strong>Add to Home Screen</strong>.</li>
+          <li>If you see <strong>Open as Web App</strong>, leave it turned on, then tap <strong>Add</strong>.</li>
+        </ol>
+        <div class="install-tip">After that, the Weld Solver icon will appear on your Home Screen and this message will no longer appear when you launch the installed app.</div>
+      </div>
+      <div id="installNative" hidden>
+        <p>Your phone can install Weld Solver directly.</p>
+        <div class="install-actions">
+          <button id="installNow" class="install-primary" type="button">Install Weld Solver</button>
+          <button id="installLaterNative" class="install-secondary" type="button">Not now</button>
+        </div>
+      </div>
+      <div id="installGeneric" hidden>
+        <p>Add Weld Solver to your Home Screen from your browser menu. Look for <strong>Install app</strong> or <strong>Add to Home Screen</strong>.</p>
+        <div class="install-actions">
+          <button id="installLaterGeneric" class="install-secondary" type="button">Got it</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+<button id="installFab" class="install-fab" type="button">Install Weld Solver</button>
+
+<div class="wrap">
+
+  <header class="mast">
+    <div>
+      <div class="lockup">Weld <span>Solutions</span></div>
+      <div class="tag">Services &middot; Systems &middot; Software &middot; Consultation</div>
+    </div>
+    <div class="doc">LASER WELD PARAMETER SOLVER<br>
+      <a href="mailto:steve@weldsolutions.com">steve@weldsolutions.com</a></div>
+  </header>
+
+  <div class="setup">
+    <div class="box">
+      <div class="l" id="trackLbl">Spot size</div>
+      <div class="spotrow">
+        <div class="spotval"><span id="spotShow">600</span><small> microns</small></div>
+        <button class="optbtn" id="openOptics">Beam calculator</button>
+      </div>
+      <div class="wobline" id="wobLine"></div>
+    </div>
+    <div class="box">
+      <div class="l">Laser rating</div>
+      <div class="ratepair">
+        <div><label for="rpk">Peak W</label><input type="number" id="rpk" value="6000" step="100" min="1"></div>
+        <div><label for="ravg">Average W</label><input type="number" id="ravg" value="600" step="10" min="1"></div>
+      </div>
+      <div class="wobline" id="rateNote"></div>
+    </div>
+    <div class="box">
+      <div class="l">Material</div>
+      <select id="mat">
+        <option value="al6061" selected>Aluminum 6061</option>
+        <option value="al4047">Aluminum 4047</option>
+        <option value="cs">Carbon and low-alloy steel</option>
+        <option value="ss">Stainless 304 / 316</option>
+        <option value="kovar">Kovar / Alloy 42</option>
+        <option value="inco">Nickel alloy - Inconel, Hastelloy</option>
+        <option value="ti">Titanium 6Al-4V</option>
+        <option value="cu">Copper</option>
+      </select>
+    </div>
+  </div>
+
+  <section class="board">
+    <h2>Process parameters</h2>
+    <div class="params">
+      <div class="p">
+        <label for="speed">Travel speed</label>
+        <div class="spd">
+          <input type="number" id="speed" value="6" step="0.5" min="0">
+          <select id="sunit">
+            <option value="mms" selected>mm/s</option>
+            <option value="mmmin">mm/min</option>
+            <option value="inmin">in/min</option>
+          </select>
+        </div>
+        <div class="sub" id="speedAlt"></div>
+      </div>
+      <div class="p" id="pavgCell">
+        <label for="pavg">Average power <span class="unit">W</span></label>
+        <input type="number" id="pavg" value="544" step="10" min="0">
+        <div class="sub" id="pavgSub"></div>
+      </div>
+      <div class="p" id="ppkCell">
+        <label>Peak power <span class="unit">W</span></label>
+        <div class="ro" id="ppkVal">-</div>
+        <div class="sub" id="ppkSub"></div>
+      </div>
+      <div class="p">
+        <label for="prr">Pulse frequency <span class="unit">Hz</span></label>
+        <input type="number" id="prr" value="40" step="5" min="0">
+        <div class="sub" id="prrSub">0 for continuous wave</div>
+      </div>
+      <div class="p">
+        <label for="pw">Pulse width <span class="unit">ms</span></label>
+        <input type="number" id="pw" value="4" step="0.25" min="0">
+        <div class="sub" id="pwSub">drives duty and pool spread</div>
+      </div>
+    </div>
+
+    <div class="cmphead">
+      <span>Section &mdash; type what you measured</span>
+      <button class="lnk" id="anchorBtn" type="button" hidden>calibrate to this section</button>
+      <select id="wdunit" data-prev="in">
+        <option value="um">microns</option>
+        <option value="in" selected>inches</option>
+        <option value="mm">mm</option>
+      </select>
+    </div>
+
+    <div class="cards">
+      <div class="card" id="fW">
+        <div class="k">Width</div>
+        <input type="number" id="mw" value="0.0570" step="0.0005" min="0">
+        <div class="d"></div>
+      </div>
+      <div class="card" id="fD">
+        <div class="k">Depth</div>
+        <input type="number" id="md" value="0.0452" step="0.0005" min="0">
+        <div class="d"></div>
+      </div>
+    </div>
+
+
+
+  </section>
+
+  <figure class="macro" style="margin:0 0 14px">
+    <div class="mh">Predicted cross section</div>
+    <div class="pan"><svg id="svgSec" viewBox="0 0 900 370" role="img" aria-label="Weld cross section with fusion width and penetration dimensioned"></svg></div>
+  </figure>
+
+  <details class="advbox">
+    <summary>Advanced <em id="reportHead"></em></summary>
+    <div class="cards">
+      <div class="card" id="kOv"><div class="k">Pulse overlap</div><div class="v">-</div><div class="d"></div></div>
+      <div class="card" id="kMode"><div class="k">Weld mode</div><div class="v">-</div><div class="d"></div></div>
+      <div class="card" id="kEff"><div class="k">Efficiency</div><div class="v">-</div><div class="d"></div></div>
+      <div class="card" id="kAR"><div class="k">Aspect ratio</div><div class="v">-</div><div class="d"></div></div>
+      <div class="card" id="kDuty"><div class="k">Duty cycle</div><div class="v">-</div><div class="d"></div></div>
+      <div class="card" id="kPE"><div class="k">Pulse energy</div><div class="v">-</div><div class="d"></div></div>
+      <div class="card" id="kArea"><div class="k">Fusion area</div><div class="v">-</div><div class="d"></div></div>
+      <div class="card" id="kHI"><div class="k">Heat input</div><div class="v">-</div><div class="d"></div></div>
+    </div>
+    <div class="thresh">
+      <div class="calf">
+        <label for="arKey">Keyhole at or above</label>
+        <input type="number" id="arKey" value="0.6" step="0.05" min="0.05">
+      </div>
+      <div class="calf">
+        <label for="arCond">Conduction below</label>
+        <input type="number" id="arCond" value="0.3" step="0.05" min="0.02">
+      </div>
+      <p class="livenote">Depth over width. These name the section, they do not change any number.
+        The defaults are common rules of thumb, not measurements. Set them from your own macros.</p>
+    </div>
+  </details>
+
+
+
+  <details class="advbox">
+    <summary>Method notes</summary>
+    <div class="foot" id="method"></div>
+  </details>
+</div>
+
+<div class="mask" id="mask">
+  <div class="modal" role="dialog" aria-modal="true" aria-label="Beam calculator">
+    <h3>Beam calculator <button class="xbtn" id="closeOptics" aria-label="Close">&times;</button></h3>
+    <div class="mb">
+      <div class="bigspot">
+        <div>
+          <div class="t">Optical spot</div>
+          <div class="n"><span id="mSpot">600</span> <em>microns</em></div>
+          <div class="s" id="mSpotAlt"></div>
+        </div>
+        <div class="trk">
+          <div class="t">Track diameter</div>
+          <div class="n"><span id="mTrack">600</span> <em>microns</em></div>
+          <div class="s" id="mTrackAlt"></div>
+        </div>
+      </div>
+      <div class="optfig"><svg id="svgOpt" viewBox="0 0 580 160" role="img" aria-label="Optical train"></svg></div>
+      <div class="optfig"><svg id="svgWob" viewBox="0 0 580 232" role="img" aria-label="Top view of the beam track"></svg></div>
+      <div class="fld">
+        <label for="mFiber">Delivery fiber core (microns)</label>
+        <input type="number" id="mFiber" value="200" step="5" min="1">
+      </div>
+      <div class="two">
+        <div class="fld">
+          <label for="mCol">Collimator (mm)</label>
+          <input type="number" id="mCol" value="100" step="5" min="1">
+        </div>
+        <div class="fld">
+          <label for="mLens">Focus lens (mm)</label>
+          <input type="number" id="mLens" value="300" step="5" min="1">
+        </div>
+      </div>
+      <div class="fld">
+        <label for="mWob">Wobble diameter (mm)</label>
+        <input type="number" id="mWob" value="0" step="0.1" min="0">
+      </div>
+      <p class="livenote">Every change is applied as you type. Close when you are finished.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id);};
+  var MAT={
+    al6061:{a:65,hm:2.60,n:'aluminum 6061',cond:3.0e5,key:1.5e6},
+    al4047:{a:60,hm:2.62,n:'aluminum 4047',cond:3.0e5,key:1.5e6},
+    cs:{a:12.0,hm:7.90,n:'carbon steel',cond:2.0e5,key:1.0e6},
+    ss:{a:4.0,hm:8.20,n:'stainless',cond:2.0e5,key:1.0e6},
+    kovar:{a:4.6,hm:7.90,n:'Kovar',cond:2.0e5,key:1.0e6},
+    inco:{a:3.4,hm:8.50,n:'nickel alloy',cond:2.0e5,key:1.0e6},
+    ti:{a:2.9,hm:5.70,n:'Ti-6Al-4V',cond:1.8e5,key:0.9e6},
+    cu:{a:111,hm:5.50,n:'copper',cond:8.0e5,key:4.0e6}
+  };
+  var HERM=70;
+  var optSpot=600, wobbleMM=0, track=600;
+  // locked by calibration, never re-derived on every keystroke
+  var lockedAR=0.79, lockedEff=null, lockedPW=4;
+  // true once the section fields hold a typed measurement instead of the prediction
+  var wdDirty=false, calMsg='', lockedNote='';
+
+  function uLab(){var u=wdUnit();return u==='in'?'in':(u==='um'?'um':'mm');}
+  // every width and depth reads out in both systems, whichever one is selected
+  function bothMM(mm){
+    if(!isFinite(mm)) return '-';
+    var u=wdUnit(), o=[];
+    if(u!=='um') o.push(Math.round(mm*1000)+' um');
+    if(u!=='mm') o.push(mm.toFixed(3)+' mm');
+    if(u!=='in') o.push((mm/25.4).toFixed(4)+' in');
+    return fromMM(mm).toFixed(wdDp())+' '+uLab()+'  /  '+o.join(' / ');
+  }
+
+  // no mode switch: a frequency of zero is a continuous beam
+  function isPulsed(){return Math.max(n('prr',0),0)>0;}
+  function dutyRaw(){
+    return Math.max(n('pw',0),0)/1000*Math.max(n('prr',0),0);
+  }
+  function dutyNow(){ return Math.min(dutyRaw(),1); }
+  function avgPower(){ return Math.max(n('pavg',0),0); }
+  // you set the average. the laser has to reach this peak during the on time to deliver it.
+  function peakPower(){
+    var d=dutyNow();
+    return (isPulsed()&&d>0) ? avgPower()/d : avgPower();
+  }
+  function ratedPk(){  return Math.max(n('rpk',1),1); }
+  function ratedAvg(){ return Math.max(n('ravg',1),1); }
+  // the average rating is a thermal ceiling, so it caps how much duty a given peak can run
+  // the peak rating sets a floor on duty: too short an on time and the peak demand runs away
+  function minDuty(){ return Math.min(avgPower()/ratedPk(),1); }
+  // longer pulses let the pool spread sideways during the pulse, so the same
+  // fusion area comes out wider and shallower. Lateral spread goes as the square
+  // root of pulse time, anchored to the pulse width at calibration.
+  function arNow(){
+    if(!isPulsed()||!(lockedPW>0)) return lockedAR;
+    var t=Math.max(n('pw',0),0.01);
+    return lockedAR*Math.sqrt(lockedPW/t);
+  }
+
+  var n=function(id,d){var v=parseFloat($(id).value);return isFinite(v)?v:d;};
+  var f2=function(x,k){return isFinite(x)?x.toFixed(k===undefined?2:k):'-';};
+  function pdens(W,dmm){var A=Math.PI/4*dmm*dmm;return A>0?W/A*100:0;}
+  function sci(w){
+    if(!(w>0))return '-';
+    if(w>=1e6)return (w/1e6).toFixed(2)+' MW/cm2';
+    if(w>=1e3)return (w/1e3).toFixed(1)+' kW/cm2';
+    return Math.round(w)+' W/cm2';
+  }
+  function toMMS(v){var u=$('sunit').value;return u==='inmin'?v*25.4/60:(u==='mmmin'?v/60:v);}
+  function speedMMS(){return Math.max(toMMS(n('speed',0)),0);}
+  function wdUnit(){return $('wdunit').value;}
+  function toMM(v,u){u=u||wdUnit();return u==='in'?v*25.4:(u==='um'?v/1000:v);}
+  function fromMM(v,u){u=u||wdUnit();return u==='in'?v/25.4:(u==='um'?v*1000:v);}
+  function wdDp(u){u=u||wdUnit();return u==='in'?4:(u==='um'?0:3);}
+  // only used before a section has ever been entered
+  function fallbackEff(m,ar){
+    var soft=/aluminum|copper/.test(m.n), mode=modeFromAR(ar);
+    if(mode==='keyhole')    return (soft?15:25)/100;
+    if(mode==='transition') return (soft? 8:16)/100;
+    return (soft?4:10)/100;
+  }
+  // area = S x width x depth. A deep narrow section tends toward a triangle at 0.50,
+  // a shallow one toward a half ellipse at 0.785. Sliding between them removes the step
+  // that used to move the answer 10 percent for a 1 percent change in pulse width.
+  function shapeOf(ar){
+    var f=(ar*ar)/(ar*ar+0.2025);          // 0.45 is the midpoint of the slide
+    return 0.785-(0.785-0.50)*f;
+  }
+  // the label is descriptive only, and the thresholds are yours to set
+  function modeFromAR(ar){
+    var kh=Math.max(n('arKey',0.6),0.05), cd=Math.max(n('arCond',0.3),0.02);
+    if(cd>=kh) cd=kh*0.5;
+    return ar>=kh?'keyhole':(ar>=cd?'transition':'conduction');
+  }
+
+  function state(){
+    var m=MAT[$('mat').value]||MAT.al6061;
+    var spotMM=optSpot/1000;
+    var v=speedMMS(), P=avgPower();
+    var HI=(v>0&&P>0)?P/v:0;
+
+    // locked by calibration, so changing any parameter moves the answer
+    var ar=arNow();
+    var mode=modeFromAR(ar), S=shapeOf(ar);
+    var eff = lockedEff!==null ? lockedEff : fallbackEff(m,ar);
+
+    // predicted section, recomputed on every change
+    var A = HI>0 ? HI*eff/m.hm : 0;
+    var Wf = A>0 ? Math.sqrt(A/(S*ar)) : 0;
+    var width = Wf>0 ? Math.max(Wf+wobbleMM,track/1000) : 0;
+    var depth = Wf*ar;
+
+    // measured section from the calibration fields, for comparison
+    // depth over the whole width, which is what the macro actually shows
+    var arSec = width>0 ? depth/width : 0;
+    var modeSec = arSec>0 ? modeFromAR(arSec) : mode;
+
+    var mW=toMM(n('mw',0)), mD=toMM(n('md',0));
+    var mWf=Math.max(mW-wobbleMM,0);
+    var haveMeas=mWf>0&&mD>0;
+    var arMeas = haveMeas ? mD/mWf : 0;
+    var arMeasSec = (haveMeas&&mW>0) ? mD/mW : 0;
+    var Smeas = haveMeas ? shapeOf(arMeas) : S;
+    var Ameas = haveMeas ? Smeas*mWf*mD : 0;
+    var effMeas = (haveMeas&&HI>0) ? Ameas*m.hm/HI : 0;
+
+    var pdPk=pdens(peakPower(),spotMM);
+
+
+    return {m:m,track:track/1000,spot:spotMM,wob:wobbleMM,speed:v,pavg:P,
+      prr:n('prr',0),pw:n('pw',0),ppk:peakPower(),pavgRaw:avgPower(),
+      width:width,depth:depth,Wf:Wf,area:A,
+      mW:mW,mD:mD,mWf:mWf,haveMeas:haveMeas,arMeas:arMeas,Ameas:Ameas,effMeas:effMeas,
+      ar:ar,mode:modeSec,modeFusion:mode,arSec:arSec,arMeasSec:arMeasSec,S:S,pdPk:pdPk,HI:HI,eff:eff,calibrated:lockedEff!==null};
+  }
+
+  function calibrate(){
+    var s=state();
+    if(!(s.mW>0&&s.mD>0)){ return paint('Waiting for a width and a depth'); }
+    if(!(s.mWf>0)){
+      calMsg='The measured width is not wider than the '+f2(wobbleMM,2)+' mm wobble, so there is no fusion width left to work from.';
+      return paint('Calibrate refused');
+    }
+    if(!(s.HI>0)){
+      calMsg='Calibrate needs a travel speed and an average power. Heat input is zero, so efficiency cannot be solved.';
+      return paint('Calibrate refused');
+    }
+    var eNew=shapeOf(s.arMeas)*s.mWf*s.mD*s.m.hm/s.HI;
+    if(!(eNew>0)||eNew>1){
+      calMsg='That section needs '+f2(eNew*100,0)+' percent of the beam to end up as melted metal, which is impossible. '+
+        'Check the units on the width and depth, and check that the power and speed on screen are the ones that produced it.';
+      return paint('Calibrate refused');
+    }
+    lockedAR=s.arMeas;
+    lockedPW=isPulsed()?Math.max(n('pw',0),0.01):0;
+    lockedEff=eNew;
+    lockedNote='locked '+bothMM(s.mW)+' x '+bothMM(s.mD)+' at '+f2(s.pavg,0)+' W and '+f2(s.speed,2)+' mm/s';
+    calMsg='';
+    paint('Anchored to the measured section');
+  }
+
+  function toffOf(s){ return s.prr>0?Math.max(1/s.prr-s.pw/1000,0):0; }
+  function card(id,cls,val,det){
+    var c=$(id);
+    c.className='card'+(cls?' '+cls:'');
+    c.querySelector('.v').textContent=val;
+    c.querySelector('.d').innerHTML=det||'';
+  }
+  // one rule for every deviation on the page: tight is green, wide is red, in between is neutral
+  function band(p){
+    if(p===null||p===undefined||!isFinite(p)) return '';
+    var a=Math.abs(p);
+    return a<2?'good':(a<=10?'warn':'bad');
+  }
+  function devSpan(p){
+    if(p===null||p===undefined||!isFinite(p)) return '';
+    var a=Math.abs(p);
+    return ' <span class="dv '+(a<2?'ok':(a<=10?'warn':'bad'))+'">'+(p>0?'+':'')+f2(p,1)+' %</span>';
+  }
+
+  function areaTxt(mm2){
+    return wdUnit()==='in' ? (mm2/645.16).toFixed(5)+' in2' : mm2.toFixed(3)+' mm2';
+  }
+
+  function paint(head){
+    var s=state(),m=s.m;
+    var pulsed=isPulsed();
+
+
+    var u=' '+uLab();
+    var cMode=s.mode, aMode=s.arMeasSec>0?modeFromAR(s.arMeasSec):null;
+
+    function pctOf(act,calc){return (calc>0&&isFinite(act)&&act>0)?(act-calc)/calc*100:null;}
+    var pW=pctOf(s.mW,s.width), pD=pctOf(s.mD,s.depth),
+        pAR=pctOf(s.arMeas,s.ar), pA=pctOf(s.Ameas,s.area), pEF=pctOf(s.effMeas,s.eff);
+
+    function secField(id,calcMM,dp){
+      var c=$(id), has=wdDirty&&isFinite(dp)&&dp!==null;
+      c.className='card'+(has?(band(dp)?' '+band(dp):''):'');
+      c.querySelector('.d').innerHTML = calcMM>0
+        ? 'calculated '+fromMM(calcMM).toFixed(wdDp())+' '+uLab()+(has?devSpan(dp):'')
+        : 'enter a power and a travel speed';
+    }
+    secField('fW',s.width,pW);
+    secField('fD',s.depth,pD);
+    var offBy=Math.max(Math.abs(pW||0),Math.abs(pD||0));
+    $('anchorBtn').hidden=!(wdDirty&&s.haveMeas&&offBy>=2);
+
+    // you set the average, so that is checked against its rating and the peak demand against its own
+    var rAvg=ratedAvg(), rPk=ratedPk();
+    var useAvg=s.pavg/rAvg, usePk=peakPower()/rPk, dNow=dutyNow();
+    $('pavg').classList.toggle('over',useAvg>1);
+    $('pavgCell').className='p';
+    $('pavgSub').textContent=f2(useAvg*100,0)+' % of the '+f2(rAvg,0)+' W average rating';
+    $('ppkVal').textContent=f2(peakPower(),0)+' W';
+    $('ppkCell').className='p '+(usePk>1?'bad':(usePk>0.9?'warn':'good'));
+    $('ppkSub').textContent=(pulsed?'average over '+f2(dNow*100,1)+' % duty':'CW, same as average')+
+      '. '+f2(usePk*100,0)+' % of the '+f2(rPk,0)+' W peak rating';
+    $('pwSub').textContent=pulsed?'shorter pulse, higher peak demand':'ignored, frequency is zero';
+    $('prrSub').textContent=pulsed?'fewer pulses, higher peak demand':'0 means continuous wave';
+    $('rateNote').innerHTML=pulsed
+      ? 'at '+f2(s.pavg,0)+' W average the peak rating needs at least '+f2(minDuty()*100,1)+
+        ' % duty, you are at '+f2(dNow*100,1)+' %'
+      : 'continuous wave, so only the average rating applies';
+    $('reportHead').textContent=head||'Validation report';
+    $('trackLbl').textContent = wobbleMM>0 ? 'Track diameter' : 'Spot size';
+    $('speedAlt').textContent=s.speed>0?f2(s.speed,2)+' mm/s  '+f2(s.speed*60,0)+' mm/min  '+f2(s.speed*60/25.4,1)+' in/min':'';
+
+    /* ---- advanced cards ---- */
+    var arScaled = pulsed && lockedPW>0 && Math.abs(n('pw',0)-lockedPW)>0.01;
+    var advNow=s.prr>0&&s.speed>0?s.speed/s.prr:0;
+    var duty0=dutyNow();
+
+    if(!(s.speed>0)){
+      card('kOv','','-','enter a travel speed');
+    } else if(!pulsed||!(s.prr>0)){
+      card('kOv','good','CW','continuous beam, no pulse gaps to close');
+    } else {
+      var ov=(1-advNow/s.track)*100, pass=ov>=HERM;
+      card('kOv',pass?'good':'bad',f2(ov,0)+' %',
+        pass?'hermetic, clears '+HERM+' %'
+            :(ov<0?'spots do not touch, gaps in the seam'
+                  :'below hermetic, needs '+Math.ceil(s.speed/(s.track*(1-HERM/100)))+' Hz or slower travel'));
+    }
+
+    var modeAgree=(!aMode||aMode===cMode);
+    var effDrift = wdDirty && pEF!==null && isFinite(pEF) && Math.abs(pEF)>2;
+    var arDrift  = wdDirty && pAR!==null && isFinite(pAR) && Math.abs(pAR)>2;
+    card('kMode', modeAgree?(cMode==='keyhole'?'good':(cMode==='transition'?'warn':'')):'bad', cMode.toUpperCase(),
+      (modeAgree
+        ? 'section reads '+f2(s.arSec,2)+' deep over wide'
+        : 'measured section reads '+f2(s.arMeasSec,2)+', which is '+aMode+' <span class="dv bad">differs</span>')+
+      '. shape factor '+f2(s.S,3));
+
+    var hasM = wdDirty && s.haveMeas;
+
+    card('kEff', hasM?band(pEF):'', f2(s.eff*100,2)+' %',
+      hasM ? 'actual '+f2(s.effMeas*100,2)+' %'+devSpan(pEF)
+           : 'of the beam ends up as melted metal');
+
+    var pARs=(wdDirty&&s.arMeasSec>0&&s.arSec>0)?(s.arMeasSec-s.arSec)/s.arSec*100:null;
+    card('kAR', hasM?band(pARs):'', f2(s.arSec,3),
+      hasM ? 'actual '+f2(s.arMeasSec,3)+devSpan(pARs)
+           : (s.wob>0 ? 'depth over full width. fusion alone is '+f2(s.ar,3)
+                      : 'depth over width'));
+
+    card('kArea', hasM?band(pA):'', s.area>0?areaTxt(s.area):'-',
+      hasM ? 'actual '+areaTxt(s.Ameas)+devSpan(pA)
+           : 'melted metal per millimetre of seam');
+
+    card('kDuty', !pulsed?'':(dutyRaw()>1.001||duty0<minDuty()?'bad':(duty0<minDuty()*1.1?'warn':(duty0>0?'good':'bad'))),
+      !pulsed?'CW':f2(duty0*100,1)+' %',
+      !pulsed?'no duty cycle, the beam never switches off'
+             :(dutyRaw()>1.001?'over 100 percent, the next pulse fires before the last one ends'
+                              :(duty0>0?'needs '+f2(minDuty()*100,1)+' % or more at this average':'no pulse train set')));
+
+    card('kPE','', pulsed?f2(s.ppk*s.pw/1000,2)+' J':'-',
+      pulsed?'average power divided by '+f2(s.prr,0)+' Hz':'CW, no discrete pulses');
+
+
+    card('kHI','', s.HI>0?f2(s.HI,1)+' J/mm':'-',
+      s.HI>0?f2(s.pavg,0)+' W over '+f2(s.speed,2)+' mm/s':'enter a power and a travel speed');
+
+    /* ---- report ---- */
+    var Emelt=s.HI*s.eff;
+    var Apred=s.area;
+    var Ameas=s.Ameas;
+    var duty=dutyNow(), avgCalc=s.ppk*duty;
+    var dutyErr=s.pavg>0?(avgCalc-s.pavg)/s.pavg*100:0;
+    var toff=s.prr>0?Math.max(1/s.prr-s.pw/1000,0):0;
+    var diff=toff>0?Math.sqrt(m.a*toff):0;
+    var adv=s.prr>0&&s.speed>0?s.speed/s.prr:0;
+
+    var toff=toffOf(s);
+    var Ameas=s.Ameas;
+
+    drawSection(s,Ameas);
+    $('method').innerHTML=
+      'METHOD - fusion area = efficiency x average power / travel speed, divided by the melt energy of the alloy. '+
+      'In pulsed mode the average is not typed, it is peak power x pulse width x rate, so widening the pulse raises the average and grows the weld. '+
+      'Area = shape factor x width x depth, the factor being 0.50 for a keyhole V, 0.62 in transition and 0.785 for a conduction half ellipse. '+
+      'Widening the pulse also gives the pool longer to spread sideways within each pulse, so the aspect ratio is scaled by the square root of the ratio '+
+      'of calibration pulse width to the one set now. That scaling is a first order argument from heat diffusion, anchored to your own calibration point, not a measured law. '+
+      'Efficiency is whatever fraction of the beam ends up as melted metal, solved from a section and then held fixed. '+
+      'Peak power does two jobs. Multiplied by duty it sets the average, so it drives how much metal melts, and divided by the spot area it '+
+      'gives the power density that decides whether the melt happens as a keyhole or by conduction. Duty cycle is pulse width x rate, so peak '+
+      'and average only separate when the pulse is shorter than the gap between pulses. At 100 percent duty they are the same number. '+
+      'Pulse rate sets the overlap that decides whether the seam is hermetic.';
+  }
+
+  /* ---- svg ---- */
+  function el(t,a,x){
+    var e=document.createElementNS('http://www.w3.org/2000/svg',t);
+    for(var p in a){if(a[p]!==null&&a[p]!==undefined)e.setAttribute(p,a[p]);}
+    if(x!==undefined)e.textContent=x;
+    return e;
+  }
+  function txt(g,x,y,t,an,col,sz){
+    g.appendChild(el('text',{x:x,y:y,'text-anchor':an||'middle','font-family':'JetBrains Mono, monospace',
+      'font-size':sz||14,fill:col||'#1A1D19'},t));
+  }
+  function dimH(g,x1,x2,y,lab,col,bg,sz){
+    col=col||'#D6342C'; bg=bg||'#fff'; sz=sz||13;
+    g.appendChild(el('line',{x1:x1,y1:y,x2:x2,y2:y,stroke:col,'stroke-width':1.4}));
+    [[x1,1],[x2,-1]].forEach(function(p){
+      g.appendChild(el('path',{d:'M'+p[0]+' '+y+' l'+(8*p[1])+' -4.5 l0 9 z',fill:col}));
+      g.appendChild(el('line',{x1:p[0],y1:y-11,x2:p[0],y2:y+11,stroke:col,'stroke-width':1,'stroke-dasharray':'3 2'}));
+    });
+    var mx=(x1+x2)/2,w=lab.length*(sz*0.62)+12;
+    g.appendChild(el('rect',{x:mx-w/2,y:y-sz/2-5,width:w,height:sz+10,fill:bg,stroke:col,'stroke-width':1}));
+    txt(g,mx,y+sz*0.36,lab,'middle',bg==='#fff'?'#1A1D19':'#E8EAE2',sz);
+  }
+  function dimV(g,x,y1,y2,lab){
+    lab=lab||'';
+    g.appendChild(el('line',{x1:x,y1:y1,x2:x,y2:y2,stroke:'#D6342C','stroke-width':1.6}));
+    [[y1,1],[y2,-1]].forEach(function(p){
+      g.appendChild(el('path',{d:'M'+x+' '+p[0]+' l-5 '+(9*p[1])+' l10 0 z',fill:'#D6342C'}));
+      g.appendChild(el('line',{x1:x-13,y1:p[0],x2:x+13,y2:p[0],stroke:'#D6342C','stroke-width':1,'stroke-dasharray':'3 2'}));
+    });
+    if(lab){
+      var w=lab.length*8.4+14;
+      g.appendChild(el('rect',{x:x+14,y:(y1+y2)/2-12,width:w,height:23,fill:'#fff',stroke:'#D6342C','stroke-width':1}));
+      txt(g,x+14+w/2,(y1+y2)/2+4,lab,'middle','#1A1D19',13);
+    }
+  }
+
+  // half width of the pool at fractional depth f, by mode.
+  // keyhole tapers steeply, conduction is a shallow bowl, transition sits between.
+  function poolHalf(f,mode){
+    if(mode==='keyhole')    return Math.pow(Math.max(0,1-f),0.72);
+    if(mode==='transition') return Math.sqrt(Math.max(0,1-Math.pow(f,1.7)));
+    return Math.sqrt(Math.max(0,1-f*f));
+  }
+  function poolPath(cx,surf,wpx,dpx,mode,frac){
+    var N=28,L=[],R=[],i,f,hw;
+    for(i=0;i<=N;i++){
+      f=i/N; hw=(wpx/2)*poolHalf(f,mode)*frac;
+      L.push([cx-hw, surf+dpx*frac*f]);
+      R.push([cx+hw, surf+dpx*frac*f]);
+    }
+    var d='M'+L[0][0].toFixed(1)+' '+L[0][1].toFixed(1);
+    for(i=1;i<=N;i++) d+=' L'+L[i][0].toFixed(1)+' '+L[i][1].toFixed(1);
+    for(i=N;i>=0;i--) d+=' L'+R[i][0].toFixed(1)+' '+R[i][1].toFixed(1);
+    return d+' Z';
+  }
+
+  function drawSection(s,A){
+    var svg=$('svgSec'); svg.innerHTML='';
+    // a phone gets a taller, narrower frame so nothing has to scroll sideways
+    var narrow=(window.innerWidth||900)<640;
+    var VW=narrow?520:900, VH=narrow?340:350;
+    svg.setAttribute('viewBox','0 0 '+VW+' '+VH);
+    svg.setAttribute('preserveAspectRatio','xMidYMid meet');
+    svg.style.aspectRatio=VW+'/'+VH;
+
+    var g=el('g'); svg.appendChild(g);
+    var W=s.width,D=s.depth;
+    var F1=narrow?17:14, F2=narrow?15:13;      // label sizes, bigger once scaled down
+    g.appendChild(el('rect',{x:0,y:0,width:VW,height:VH,fill:'#9A9E8C'}));
+    if(!(W>0&&D>0)){ txt(g,VW/2,VH/2,'ENTER A POWER AND A TRAVEL SPEED','middle','#3E4239',F1); return; }
+
+    var mx=narrow?18:40;                        // side margin of the metal
+    var surf=narrow?150:150, cx=VW/2;
+    var availW=narrow?220:360, availD=narrow?108:118;
+    // the frame has to hold whichever is bigger, the prediction or the section you typed
+    var showMeas=wdDirty&&s.mW>0&&s.mD>0;
+    var sc=Math.min(availW/Math.max(W,showMeas?s.mW:0), availD/Math.max(D,showMeas?s.mD:0));
+    var wpx=W*sc, dpx=D*sc, tpx=s.track*sc;
+    var mwpx=s.mW*sc, mdpx=s.mD*sc;
+
+    // parent metal
+    var mh=VH-surf;
+    g.appendChild(el('rect',{x:mx,y:surf,width:VW-mx*2,height:mh,fill:'#C8CCC4'}));
+    g.appendChild(el('line',{x1:mx,y1:surf,x2:VW-mx,y2:surf,stroke:'#6F7669','stroke-width':1.6}));
+    for(var i=0;i<160;i++){
+      g.appendChild(el('circle',{cx:(mx+Math.random()*(VW-mx*2)).toFixed(1),
+        cy:(surf+Math.random()*mh).toFixed(1),r:(Math.random()*1.1+0.3).toFixed(2),
+        fill:'#AEB4AA','fill-opacity':(Math.random()*0.5+0.2).toFixed(2)}));
+    }
+
+    // fusion zone
+    g.appendChild(el('path',{d:poolPath(cx,surf,wpx,dpx,s.mode,1),
+      fill:'#B4BAB2',stroke:'#5E655C','stroke-width':1.6}));
+    // solidification lines are the same boundary at earlier stages, so they follow the shape
+    for(var k=1;k<=5;k++){
+      g.appendChild(el('path',{d:poolPath(cx,surf,wpx,dpx,s.mode,k/6),
+        fill:'none',stroke:'#8B928A','stroke-width':1,'stroke-opacity':'.55'}));
+    }
+    // the section you measured, over the top, so the difference is visible
+    if(showMeas){
+      var mMode=modeFromAR(s.mD/Math.max(s.mW,0.001));
+      g.appendChild(el('path',{d:poolPath(cx,surf,mwpx,mdpx,mMode,1),
+        fill:'none',stroke:'#D6342C','stroke-width':2,'stroke-dasharray':'7 4'}));
+      txt(g,mx+8,surf+14,'dashed = measured','start','#7A2018',F2);
+    }
+
+    // beam at the surface
+    // the cone is schematic, so hold it inside the weld it made
+    var cone=Math.min(tpx*1.15, wpx*0.42);
+    g.appendChild(el('path',{d:'M'+(cx-cone)+' '+(narrow?26:20)+' L'+(cx-tpx/2)+' '+surf+
+      ' L'+(cx+tpx/2)+' '+surf+' L'+(cx+cone)+' '+(narrow?26:20)+' Z',fill:'#D6342C','fill-opacity':'.16'}));
+    g.appendChild(el('line',{x1:cx-tpx/2,y1:surf,x2:cx+tpx/2,y2:surf,stroke:'#D6342C','stroke-width':4}));
+
+    // three dimensions
+    dimH(g,cx-tpx/2,cx+tpx/2,surf-(narrow?58:52),Math.round(track)+' um','#D6342C','#fff',F2);
+    txt(g,cx,surf-(narrow?80:74),'TRACK','middle','#3E4239',F2);
+    dimH(g,cx-wpx/2,cx+wpx/2,surf+dpx+(narrow?42:46),fromMM(W).toFixed(wdDp())+' '+uLab(),'#D6342C','#fff',F2);
+    txt(g,cx,surf+dpx+(narrow?70:74),'WIDTH','middle','#3E4239',F2);
+    if(narrow){
+      // no room beside the weld on a phone, so depth is called out underneath
+      dimV(g,cx+wpx/2+24,surf,surf+dpx,fromMM(D).toFixed(wdDp())+' '+uLab());
+      txt(g,cx+wpx/2+92,surf-14,'DEPTH','middle','#3E4239',F2);
+    } else {
+      dimV(g,cx+wpx/2+70,surf,surf+dpx,'DEPTH '+fromMM(D).toFixed(wdDp())+' '+uLab());
+    }
+  }
+
+  /* ---- beam calculator ---- */
+  function drawOptics(fib,col,lens,dSpot){
+    var svg=$('svgOpt'); svg.innerHTML='';
+    svg.setAttribute('viewBox','0 0 580 160');
+    svg.setAttribute('preserveAspectRatio','xMidYMid meet');
+    var g=el('g'); svg.appendChild(g);
+    var wobMM=Math.max(n('mWob',0),0);
+    var cy=80,x0=54,gap=68;
+    var right=wobMM>0?448:512;      // leave room for the wobble dimension on the right
+    var sc=(right-x0-gap)/(col+lens);
+    var xc=x0+col*sc,xl=xc+gap,xs=xl+lens*sc,h=34;
+    var defs=el('defs');
+    var lg=el('linearGradient',{id:'bg1',x1:'0',y1:'0',x2:'0',y2:'1'});
+    lg.appendChild(el('stop',{offset:'0','stop-color':'#D6342C','stop-opacity':'.25'}));
+    lg.appendChild(el('stop',{offset:'.5','stop-color':'#FFB9A6','stop-opacity':'.8'}));
+    lg.appendChild(el('stop',{offset:'1','stop-color':'#D6342C','stop-opacity':'.25'}));
+    defs.appendChild(lg); svg.appendChild(defs);
+    g.appendChild(el('rect',{x:0,y:0,width:580,height:160,fill:'#262A25'}));
+    g.appendChild(el('line',{x1:20,y1:cy,x2:560,y2:cy,stroke:'#4A4F47','stroke-width':1,'stroke-dasharray':'7 4'}));
+    g.appendChild(el('path',{d:'M'+x0+' '+(cy-2)+' L'+xc+' '+(cy-h)+' L'+xc+' '+(cy+h)+' L'+x0+' '+(cy+2)+' Z',fill:'url(#bg1)'}));
+    g.appendChild(el('rect',{x:xc,y:cy-h,width:(xl-xc),height:h*2,fill:'url(#bg1)'}));
+    g.appendChild(el('path',{d:'M'+xl+' '+(cy-h)+' L'+xs+' '+(cy-2.5)+' L'+xs+' '+(cy+2.5)+' L'+xl+' '+(cy+h)+' Z',fill:'url(#bg1)'}));
+    [-1,1].forEach(function(k){
+      g.appendChild(el('polyline',{points:x0+','+(cy+k*2)+' '+xc+','+(cy+k*h)+' '+xl+','+(cy+k*h)+' '+xs+','+(cy+k*2.5),
+        fill:'none',stroke:'#F26A4F','stroke-width':1.3}));
+    });
+    g.appendChild(el('rect',{x:x0-38,y:cy-9,width:38,height:18,fill:'#3B423A',stroke:'#5E655C'}));
+    g.appendChild(el('rect',{x:x0-6,y:cy-2,width:6,height:4,fill:'#FFD9AE'}));
+    txt(g,x0-19,cy+26,'FIBER','middle','#8D9587',10.5);
+    txt(g,x0-19,cy+38,Math.round(fib)+' um','middle','#F2A8A3',11);
+    function lens1(x){
+      g.appendChild(el('path',{d:'M'+x+' '+(cy-h-9)+' C'+(x+11)+' '+(cy-h*0.4)+' '+(x+11)+' '+(cy+h*0.4)+' '+x+' '+(cy+h+9)+
+        ' C'+(x-11)+' '+(cy+h*0.4)+' '+(x-11)+' '+(cy-h*0.4)+' '+x+' '+(cy-h-9)+' Z',
+        fill:'#9FD8E6','fill-opacity':'.18',stroke:'#8FBFCC','stroke-width':1.2}));
+    }
+    lens1(xc); lens1(xl);
+    txt(g,xc,cy-h-16,'COLLIMATOR','middle','#8D9587',10.5);
+    txt(g,xl,cy-h-16,'FOCUS LENS','middle','#8D9587',10.5);
+    g.appendChild(el('rect',{x:xs,y:cy-46,width:14,height:92,fill:'#3B423A',stroke:'#5E655C'}));
+    g.appendChild(el('circle',{cx:xs,cy:cy,r:11,fill:'#F26A4F','fill-opacity':'.35'}));
+    g.appendChild(el('circle',{cx:xs,cy:cy,r:3,fill:'#FFE6C4'}));
+    dimH(g,x0,xc,cy+58,'COLL '+col+'mm','#8FBFCC','#262A25',11.5);
+    dimH(g,xl,xs,cy+58,'LENS '+lens+'mm','#8FBFCC','#262A25',11.5);
+    g.appendChild(el('line',{x1:xs-4,y1:cy-8,x2:xs-58,y2:cy-48,stroke:'#D6342C','stroke-width':1}));
+    var lab='SPOT '+Math.round(dSpot)+' um',w=lab.length*7+14;
+    g.appendChild(el('rect',{x:xs-58-w,y:cy-60,width:w,height:21,fill:'#262A25',stroke:'#D6342C'}));
+    txt(g,xs-58-w/2,cy-46,lab,'middle','#F2A8A3',11.5);
+
+    // how far the beam swings at the work, drawn against the fixed spot
+    var wob=wobMM;
+    if(wob>0){
+      var hw=38;
+      g.appendChild(el('line',{x1:xs+30,y1:cy-hw,x2:xs+30,y2:cy+hw,stroke:'#8FBFCC','stroke-width':1.4}));
+      [[cy-hw,1],[cy+hw,-1]].forEach(function(pt){
+        g.appendChild(el('path',{d:'M'+(xs+30)+' '+pt[0]+' l-4.5 '+(9*pt[1])+' l9 0 z',fill:'#8FBFCC'}));
+        g.appendChild(el('line',{x1:xs+18,y1:pt[0],x2:xs+42,y2:pt[0],stroke:'#8FBFCC','stroke-width':1,'stroke-dasharray':'3 2'}));
+      });
+      g.appendChild(el('line',{x1:xs,y1:cy-hw,x2:xs+18,y2:cy-hw,stroke:'#8FBFCC','stroke-width':1,'stroke-dasharray':'3 2'}));
+      g.appendChild(el('line',{x1:xs,y1:cy+hw,x2:xs+18,y2:cy+hw,stroke:'#8FBFCC','stroke-width':1,'stroke-dasharray':'3 2'}));
+      txt(g,xs+48,cy-4,'WOBBLE','start','#8D9587',10.5);
+      txt(g,xs+48,cy+10,wob.toFixed(2)+' mm','start','#8FBFCC',11.5);
+    }
+  }
+
+  function drawWobble(spotUm,wobUm){
+    var svg=$('svgWob'); svg.innerHTML='';
+    svg.setAttribute('viewBox','0 0 580 232');
+    svg.setAttribute('preserveAspectRatio','xMidYMid meet');
+    var g=el('g'); svg.appendChild(g);
+    var cy=96,cx=250,xL=40,xR=452;
+    var tot=spotUm+wobUm;                       // track diameter
+    var sc=Math.min(104/Math.max(tot,1),1.4);
+    var rTrack=tot*sc/2;
+    var rS=Math.max(spotUm*sc/2,2.5);
+    var rPath=Math.max(rTrack-rS,0);            // forces the spot onto the track edge exactly
+
+    g.appendChild(el('rect',{x:0,y:0,width:580,height:232,fill:'#262A25'}));
+
+    // travel
+    g.appendChild(el('line',{x1:xL,y1:26,x2:xR-14,y2:26,stroke:'#5E655C','stroke-width':1}));
+    g.appendChild(el('path',{d:'M'+(xR-14)+' 26 l-8 -4 l0 8 z',fill:'#5E655C'}));
+    txt(g,xL,18,'TRAVEL','start','#8D9587',10.5);
+
+    // the swept track
+    g.appendChild(el('rect',{x:xL,y:cy-rTrack,width:(xR-xL),height:rTrack*2,fill:'#D6342C','fill-opacity':'.15'}));
+    g.appendChild(el('line',{x1:xL,y1:cy-rTrack,x2:xR,y2:cy-rTrack,stroke:'#D6342C','stroke-width':1}));
+    g.appendChild(el('line',{x1:xL,y1:cy+rTrack,x2:xR,y2:cy+rTrack,stroke:'#D6342C','stroke-width':1}));
+    g.appendChild(el('line',{x1:xL,y1:cy,x2:xR,y2:cy,stroke:'#4A4F47','stroke-width':1,'stroke-dasharray':'6 4'}));
+
+    if(wobUm>0){
+      g.appendChild(el('circle',{cx:cx,cy:cy,r:rPath,fill:'none',stroke:'#8FBFCC',
+        'stroke-width':1.3,'stroke-dasharray':'5 4'}));
+      [30,90,150,210,270,330].forEach(function(a){
+        var r=a*Math.PI/180;
+        g.appendChild(el('circle',{cx:(cx+rPath*Math.cos(r)).toFixed(1),cy:(cy+rPath*Math.sin(r)).toFixed(1),
+          r:rS,fill:'none',stroke:'#F26A4F','stroke-opacity':'.4','stroke-width':1}));
+      });
+      g.appendChild(el('circle',{cx:cx,cy:cy-rPath,r:rS*1.9,fill:'#D6342C','fill-opacity':'.25'}));
+      g.appendChild(el('circle',{cx:cx,cy:cy-rPath,r:rS,fill:'#FFE6C4',stroke:'#D6342C'}));
+      dimH(g,cx-rPath,cx+rPath,cy+rTrack+34,'wobble '+(wobUm/1000).toFixed(2)+' mm','#8FBFCC','#262A25',11.5);
+      txt(g,cx,cy+rTrack+62,'beam centre path','middle','#8D9587',10.5);
+    } else {
+      g.appendChild(el('circle',{cx:cx,cy:cy,r:rS*1.9,fill:'#D6342C','fill-opacity':'.25'}));
+      g.appendChild(el('circle',{cx:cx,cy:cy,r:rS,fill:'#FFE6C4',stroke:'#D6342C'}));
+      txt(g,cx,cy+rTrack+34,'no wobble, the track is the spot','middle','#8D9587',11);
+    }
+
+    // track diameter, edge to edge
+    g.appendChild(el('line',{x1:480,y1:cy-rTrack,x2:480,y2:cy+rTrack,stroke:'#D6342C','stroke-width':1.5}));
+    [[cy-rTrack,1],[cy+rTrack,-1]].forEach(function(pt){
+      g.appendChild(el('path',{d:'M480 '+pt[0]+' l-4.5 '+(9*pt[1])+' l9 0 z',fill:'#D6342C'}));
+      g.appendChild(el('line',{x1:467,y1:pt[0],x2:493,y2:pt[0],stroke:'#D6342C','stroke-width':1}));
+    });
+    txt(g,500,cy-4,wobUm>0?'TRACK':'SPOT','start','#8D9587',10.5);
+    txt(g,500,cy+12,Math.round(tot)+' microns','start','#F2A8A3',12);
+  }
+
+  function optics(){
+    var fib=n('mFiber',200),col=Math.max(n('mCol',100),1),lens=Math.max(n('mLens',300),1);
+    var wobMM=Math.max(n('mWob',0),0), wobUm=wobMM*1000;
+    var M=lens/col, sp=fib*M, tr=sp+wobUm;
+    $('mSpot').textContent=Math.round(sp);
+    $('mSpotAlt').textContent=(sp/1000).toFixed(3)+' mm  /  '+(sp/25400).toFixed(4)+' in';
+    $('mTrack').textContent=Math.round(tr);
+    $('mTrackAlt').textContent=(tr/1000).toFixed(3)+' mm  /  '+(tr/25400).toFixed(4)+' in';
+    drawOptics(fib,col,lens,sp);
+    drawWobble(sp,wobUm);
+
+    // the track is what the process sees, so it is applied as soon as it changes
+    optSpot=Math.round(sp); wobbleMM=wobMM; track=Math.round(tr);
+    $('spotShow').textContent=track;
+    $('wobLine').textContent=wobMM>0
+      ? 'spot '+optSpot+' microns + wobble '+wobMM.toFixed(2)+' mm'
+      : 'fiber core '+Math.round(fib)+' microns imaged at '+M.toFixed(2)+' x';
+    paint('Live calculation');
+  }
+
+  $('openOptics').addEventListener('click',function(){$('mask').classList.add('on');optics();});
+  function shutOptics(){ $('mask').classList.remove('on'); }
+  $('closeOptics').addEventListener('click',shutOptics);
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'&&$('mask').classList.contains('on')) shutOptics();
+  });
+  $('mask').addEventListener('click',function(e){if(e.target===this)this.classList.remove('on');});
+  ['mFiber','mCol','mLens','mWob'].forEach(function(id){$(id).addEventListener('input',optics);});
+
+  $('speed').addEventListener('input',function(){ paint('Live calculation'); });
+  ['pavg','pw','prr','rpk','ravg','arKey','arCond'].forEach(function(id){
+    $(id).addEventListener('input',function(){ paint('Live calculation'); });
+  });
+  // typing a section holds it as measured. calibrate adopts it, nothing happens before that
+  // typing an actual shows the deviation at once. it only becomes the anchor if there is no anchor yet,
+  // otherwise the model would chase the measurement and every deviation would read zero.
+  ['mw','md'].forEach(function(id){
+    $(id).addEventListener('input',function(){
+      wdDirty=true; calMsg='';
+      if(lockedEff===null) calibrate(); else paint('Comparing against the anchor');
+    });
+  });
+  $('anchorBtn').addEventListener('click',function(){ calibrate(); });
+  ['sunit','mat'].forEach(function(id){$(id).addEventListener('change',function(){paint('Live calculation');});});
+  $('wdunit').addEventListener('change',function(){
+    var prev=this.dataset.prev||'in', now=this.value;
+    ['mw','md'].forEach(function(id){
+      var v=parseFloat($(id).value);
+      if(isFinite(v)) $(id).value=fromMM(toMM(v,prev),now).toFixed(wdDp(now));
+      $(id).step = now==='in'?0.0005:(now==='um'?1:0.01);
+    });
+    this.dataset.prev=now;
+    paint('Live calculation');
+  });
+
+  var rsz;
+  window.addEventListener('resize',function(){
+    clearTimeout(rsz); rsz=setTimeout(function(){ paint('Live calculation'); },150);
+  });
+  $('wobLine').textContent='fiber core 200 microns imaged at 3.00 x';
+  calibrate();
+})();
+</script>
+
+<script>
+(function(){
+  var shade=document.getElementById('installShade');
+  var fab=document.getElementById('installFab');
+  var close=document.getElementById('installClose');
+  var iosBox=document.getElementById('installIos');
+  var nativeBox=document.getElementById('installNative');
+  var genericBox=document.getElementById('installGeneric');
+  var installNow=document.getElementById('installNow');
+  var deferredPrompt=null;
+
+  var standalone = window.matchMedia('(display-mode: standalone)').matches ||
+                   window.navigator.standalone === true;
+  if(standalone) return;
+
+  var ua=navigator.userAgent || '';
+  var isiOS=/iPad|iPhone|iPod/.test(ua) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+  var isMobile=/Android|iPad|iPhone|iPod|Mobile/i.test(ua) || window.innerWidth<760;
+
+  function setPanel(which){
+    iosBox.hidden=which!=='ios';
+    nativeBox.hidden=which!=='native';
+    genericBox.hidden=which!=='generic';
+  }
+  function openInstall(){
+    if(isiOS) setPanel('ios');
+    else if(deferredPrompt) setPanel('native');
+    else setPanel('generic');
+    shade.classList.add('show');
+    shade.setAttribute('aria-hidden','false');
+  }
+  function closeInstall(){
+    shade.classList.remove('show');
+    shade.setAttribute('aria-hidden','true');
+    fab.classList.add('show');
+  }
+
+  fab.addEventListener('click',openInstall);
+  close.addEventListener('click',closeInstall);
+  shade.addEventListener('click',function(e){ if(e.target===shade) closeInstall(); });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&shade.classList.contains('show')) closeInstall(); });
+  ['installLaterNative','installLaterGeneric'].forEach(function(id){
+    var b=document.getElementById(id); if(b) b.addEventListener('click',closeInstall);
+  });
+
+  window.addEventListener('beforeinstallprompt',function(e){
+    e.preventDefault();
+    deferredPrompt=e;
+    if(!shade.classList.contains('show')) fab.classList.add('show');
+  });
+
+  if(installNow){
+    installNow.addEventListener('click',async function(){
+      if(!deferredPrompt){ setPanel('generic'); return; }
+      deferredPrompt.prompt();
+      try{ await deferredPrompt.userChoice; }catch(e){}
+      deferredPrompt=null;
+      closeInstall();
+    });
+  }
+
+  window.addEventListener('appinstalled',function(){
+    deferredPrompt=null;
+    shade.classList.remove('show');
+    fab.classList.remove('show');
+  });
+
+  // On phones, show the helper automatically once per browser tab/session.
+  // Closing it leaves a small Install button so the user can reopen it anytime.
+  if(isMobile && !sessionStorage.getItem('weldInstallShown')){
+    sessionStorage.setItem('weldInstallShown','1');
+    setTimeout(openInstall,700);
+  } else {
+    fab.classList.add('show');
+  }
+})();
+</script>
+
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('sw.js').catch(function(){/* offline use simply will not be available */});
+  });
+}
+</script>
+</body>
+</html>
